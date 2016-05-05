@@ -1,5 +1,3 @@
-from cocos.audio.pygame import mixer
-from cocos.audio.pygame.mixer import Sound
 from cocos.director import director
 from cocos.menu import Menu, CENTER, MenuItem, shake, shake_back
 from cocos.scene import Scene

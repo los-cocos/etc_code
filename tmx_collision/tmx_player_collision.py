@@ -15,7 +15,7 @@ pyglet.resource.path.append(pyglet.resource.get_script_home())
 pyglet.resource.reindex()
 
 import cocos
-from cocos import tiles, actions, layer
+from cocos import tiles, actions, layer, mapcolliders
 
 
 class PlatformerController2(actions.Action):
@@ -107,8 +107,9 @@ def main():
     walls.objects.remove(player_start)
 
     # give a collision handler to the player
-    player.collision_handler = tiles.make_collision_handler(tiles.TmxObjectMapCollider('slide'),
-                                                            walls)
+    mapcollider = mapcolliders.TmxObjectMapCollider()
+    mapcollider.on_bump_handler = mapcollider.on_bump_slide
+    player.collision_handler = mapcolliders.make_collision_handler(mapcollider, walls)
 
     # construct the scene with a background layer color and the scrolling layers
     platformer_scene = cocos.scene.Scene()

@@ -8,6 +8,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 testinfo = "s, q"
 tags = "TmxObjectMapCollider, collide_map"
 
+from math import sin, cos, radians
+
 import pyglet
 from pyglet.window import key
 
@@ -21,13 +23,12 @@ from cocos.mapcolliders import TmxObjectMapCollider
 
 
 class Ball(cocos.sprite.Sprite):
-    def __init__(self, position, velocity, fn_collision_handler, fn_set_focus, color):
-        super(Ball, self).__init__("circle6.png", color=color)
+    def __init__(self, position, velocity, fn_collision_handler):
+        super(Ball, self).__init__("circle6.png", color=(255, 0, 255))
         self.opacity = 128
         self.position = position
         self.velocity = velocity
         self.fn_collision_handler = fn_collision_handler
-        self.fn_set_focus = fn_set_focus
         self.schedule(self.step)
 
     def step(self, dt):
@@ -40,18 +41,40 @@ class Ball(cocos.sprite.Sprite):
         new.y += dy
         self.velocity = self.fn_collision_handler(last, new, vx, vy)
         self.position = new.center
-        self.fn_set_focus(*self.position)
 
+class Actors(cocos.layer.ScrollableLayer):
+    is_event_handler = True
+    def __init__(self, fn_collision_handler):
+        super(Actors, self).__init__()
+        self.fn_collision_handler = fn_collision_handler
+        self.num_balls = 0
+
+    def add_ball(self):
+        k = self.num_balls
+        vx = cos(radians(k * 3)) * 600.0
+        vy = sin(radians(k * 3)) * 600.0
+        b = Ball((300, 300), (vx, vy), self.fn_collision_handler) 
+        self.add(b)
+        self.num_balls += 1
+        print("balls:", self.num_balls)
+        
+    def on_key_press(self, key, modifier):
+        if key == pyglet.window.key.SPACE:
+            self.add_ball()
+        if key == pyglet.window.key.Z:
+            scale = platformer_scene.scale
+            scale = 0.25 if scale == 1.0 else 1.0
+            platformer_scene.scale = scale
 
 description = """
 Shows how to use a TmxMapCollider to control collision between actors and the terrain.
-Use Left-Right arrows and space to control.
-Use D to show cell / tile info
+Use SPACE to add a ball
+Use Z to togglt scale
 """
 
 
 def main():
-    global keyboard, walls, scroller
+    global keyboard, walls, scroller, platformer_scene
     from cocos.director import director
     director.init(width=800, height=600, autoscale=False)
 
@@ -71,19 +94,10 @@ def main():
     # make the function to set visual focus at position
     fn_set_focus = scroller.set_focus
     
-    # create a layer to put the player in
-    actors_layer = layer.ScrollableLayer()
-    ball = Ball((300, 300), (600, 600), fn_collision_handler, fn_set_focus, (255, 0, 255)) 
-    actors_layer.add(ball)
-
-    scroller.add(actors_layer, z=1)
+    scroller.add(Actors(fn_collision_handler), z=1)
 
     # set the player start using the object with the 'player_start' property
     player_start = walls.find_cells(player_start=True)[0]
-    ball.position = player_start.center
-
-    # set focus so the player is in view
-    scroller.set_focus(*ball.position)
 
     # extract the player_start, which is not a wall
     walls.objects.remove(player_start)
@@ -92,6 +106,10 @@ def main():
     platformer_scene = cocos.scene.Scene()
     platformer_scene.add(layer.ColorLayer(100, 120, 150, 255), z=0)
     platformer_scene.add(scroller, z=1)
+    platformer_scene.scale = 0.75
+
+    # set focus 
+    scroller.set_focus(300, 300)
 
     # track keyboard presses
     keyboard = key.KeyStateHandler()

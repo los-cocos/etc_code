@@ -48,7 +48,8 @@ from __future__ import division, print_function
 from cocos.particle_systems import *
 from cocos.particle import Color
 from cocos.text import Label
-from cocos.tiles import load, RectMapLayer, RectMapCollider
+from cocos.tiles import load, RectMapLayer
+from cocos.mapcolliders import RectMapWithPropsCollider
 from cocos.layer import Layer, ColorLayer, ScrollingManager, ScrollableLayer
 from cocos.sprite import Sprite
 from cocos.actions import *
@@ -157,38 +158,31 @@ class Game(ScrollableLayer):
             self.sprite.dx = 0
             print("release right, dx:", self.sprite.dx)
 
-class CustomRectMapCollider(RectMapCollider):
+class SpyCollider(RectMapWithPropsCollider):
     """
-    Same as RectMapCollider, except it publishes which cells will be considered
+    Same as RectMapWithPropsCollider, except it publishes which cells will be considered
     for collision.
 
     Usage:
         # istantiate
-        a = CustomRectMapCollider()
+        a = SpyCollider()
+        # set the behavior for velocity change on collision with
+        # a.on_bump_handler = a.on_bump_slide
         # add the signal we want to emit
         a.signal = blinker.signal("collider cells")
         # use as stock RectMapCollider
         # catch the signal with something like ShowCollision
     """
-    def collide_map(self, map, last, new, dy, dx):
-        """same as original except the self.signal... line"""
-        self.resting = False
-        tested = set()
-        # next line added for debug
-        self.signal.send(payload=map.get_in_region(*(new.bottomleft + new.topright)))
-        for cell in map.get_in_region(*(new.bottomleft + new.topright)):
-            if cell is None or cell.tile is None:
-                continue
-            # don't re-test
-            key = (cell.i, cell.j)
-            if key in tested:
-                continue
-            tested.add(cell)
-            dx, dy = self.do_collision(cell, last, new, dy, dx)
-        return dx, dy
+    def collide_map(self, maplayer, last, new, vx, vy):
+        """collide_map en dos pasadas; """
+        objects = maplayer.get_in_region(*(new.bottomleft + new.topright))
+        self.signal.send(payload=objects)
+        return super(SpyCollider, self).collide_map(maplayer, last, new, vx, vy)
+
 
 layer = Game()
-collider = CustomRectMapCollider()
+collider = SpyCollider()
+collider.on_bump_handler = collider.on_bump_slide
 collider.signal = blinker.signal("collider cells")
 #collider = RectMapCollider()
 
@@ -201,9 +195,9 @@ def update(dt):
 	new = last.copy()
 	new.x += layer.sprite.dx
 	new.y += layer.sprite.dy
-	collider.collide_map(tilemap, last, new, layer.sprite.dy, layer.sprite.dx)
+	# dont care about velocity, pass 0, 0
+	collider.collide_map(tilemap, last, new, 0.0, 0.0)
 	layer.sprite.position = new.center
-	print('center, dy, bottom:', new.center, layer.sprite.dy, new.bottom)
 	scroller.set_focus(*new.center)
 
 # Schedule Updates
