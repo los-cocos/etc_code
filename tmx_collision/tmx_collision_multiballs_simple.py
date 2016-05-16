@@ -61,20 +61,39 @@ class Actors(cocos.layer.ScrollableLayer):
     def on_key_press(self, key, modifier):
         if key == pyglet.window.key.SPACE:
             self.add_ball()
-        if key == pyglet.window.key.Z:
-            scale = platformer_scene.scale
-            scale = 0.25 if scale == 1.0 else 1.0
-            platformer_scene.scale = scale
+
+# move focus and zoom controls
+def on_key_press(key, modifier):
+    if key == pyglet.window.key.PAGEUP:
+        scale = scroller.scale
+        if scale < 4.0: scale *= 1.2
+        scroller.scale = scale
+    elif key == pyglet.window.key.PAGEDOWN:
+        scale = scroller.scale
+        if scale > 0.5: scale /= 1.2
+        scroller.scale = scale
+    fx, fy = scroller.fx, scroller.fy
+    if key == pyglet.window.key.UP:
+        fy += 50
+    elif key == pyglet.window.key.DOWN:
+        fy -= 50
+    elif key == pyglet.window.key.LEFT:
+        fx -= 50
+    elif key == pyglet.window.key.RIGHT:
+        fx += 50
+    scroller.set_focus(fx, fy)
+
 
 description = """
 Shows how to use a TmxMapCollider to control collision between actors and the terrain.
-Use SPACE to add a ball
-Use Z to togglt scale
+Use
+  SPACE to add a ball
+  Arrows to move focua
+  Page Down, Page up to change zoom.
 """
 
-
 def main():
-    global keyboard, walls, scroller, platformer_scene
+    global walls, scroller, platformer_scene
     from cocos.director import director
     director.init(width=800, height=600, autoscale=False)
 
@@ -106,14 +125,12 @@ def main():
     platformer_scene = cocos.scene.Scene()
     platformer_scene.add(layer.ColorLayer(100, 120, 150, 255), z=0)
     platformer_scene.add(scroller, z=1)
-    platformer_scene.scale = 0.75
 
     # set focus 
     scroller.set_focus(300, 300)
 
-    # track keyboard presses
-    keyboard = key.KeyStateHandler()
-    director.window.push_handlers(keyboard)
+    # handle zoom and pan commands
+    director.window.push_handlers(on_key_press)
 
     # run the scene
     director.run(platformer_scene)
