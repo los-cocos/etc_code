@@ -1,0 +1,4 @@
+bugdemo and experiments for cocos issue #291
+
+snippet i mentioned in the issue goes to i_*.py file
+
